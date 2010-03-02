@@ -1,5 +1,6 @@
-name = "OpenID Relying Party SSO Demo"
-description = "Custom module for OpenID Single Sign-On demo."
-core = 6.x
+core = "6.x"
 dependencies[] = "openid_sso"
 dependencies[] = "sync_user"
+description = "Relying party configuration for OpenID Single Sign-On."
+name = "OpenID Relying Party SSO"
+package = "OpenID"
