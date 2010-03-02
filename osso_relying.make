@@ -1,7 +1,8 @@
 core = "6.x"
 
-projects[ctools][version] = "1.3"
-projects[feeds][version] = "1.0-alpha12"
+; "For our purposes CTools and Feeds are core" - Alex Barth
+; projects[ctools][version] = "1.3"
+; projects[feeds][version] = "1.0-alpha12"
 
 ; KeyAuth
 projects[keyauth][type] = "module"
