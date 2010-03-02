@@ -1,0 +1,169 @@
+<?php
+/**
+ * @file
+ * Synchronize local users from another Drupal site that exposes user
+ * information with PuSH user module.
+ *
+ * @todo Add authentication with url_sign module.
+ *
+ * - Don't require a user to sign a URL.
+ * - Add shared private key between OP and RPs.
+ * - Extend FeedsPubSubFetcher in sync_user and sign every request URL with
+ *   private key.
+ * - Verify signature in push_user before returning the feed.
+ * - Add nonce and random token to signed URL?
+ */
+
+include_once('sync_user.features.inc');
+
+/**
+ * Implementation of hook_menu().
+ */
+function sync_user_menu() {
+  $items = array();
+  $items['admin/user/sync'] = array(
+    'title' => 'Synchronize users',
+    'description' => 'Synchronize users from another Drupal site.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sync_user_form', 'administer users'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_feeds_plugins().
+ */
+function sync_user_feeds_plugins() {
+  $info = array();
+  $info['SyncUserParser'] = array(
+    'name' => 'Sync User parser',
+	    'description' => 'Parses user account information from feeds provided by the PuSH User module.',
+	    'handler' => array(
+	      'parent' => 'FeedsParser',
+	      'class' => 'SyncUserParser',
+	      'file' => 'SyncUserParser.inc',
+	      'path' => drupal_get_path('module', 'sync_user'),
+	    ),
+	  );
+	return $info;
+}
+
+/**
+ * Implementation of hook_user().
+ *
+ * Subscribe/unsubscribe users when they register.
+ */
+function sync_user_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'insert':
+      if (isset($edit['auth_openid'])) {
+        sync_user_subscribe($account->uid, sync_user_subscription_url($edit['auth_openid']));
+      }
+      break;
+    case 'delete':
+      sync_user_unsubscribe($account->uid);
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function sync_user_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'user_profile_form' && user_access('administer users')) {
+    $account = $form['_account']['#value'];
+    if ($importer = feeds_importer('user_updates')) {
+      // Build form.
+      $source = feeds_source($importer->id, $account->uid);
+      $form['sync_user_feed'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Synchronization feed'),
+        '#description' => t('You can change this URL for all users on !sync_settings.', array('!sync_settings' => l(t('Synchronize users settings'), 'admin/user/sync'))),
+      );
+      if ($url = $source->config['FeedsPubSubFetcher']['source']) {
+        $form['sync_user_feed']['url']['#value'] = '<div class="sub-url">'. l(check_plain($url), $url) .'</div>';
+      }
+      $form['sync_user_feed']['resubscribe'] = array(
+        '#value' => isset($url) ? t('Refresh subscription') : t('Subscribe'),
+        '#type' => 'submit',
+        '#submit' => array('sync_user_subscribe_submit'),
+      );
+    }
+  }
+}
+
+/**
+ * Submit handler for subscription button.
+ */
+function sync_user_subscribe_submit($form, &$form_state) {
+  $uid = $form_state['values']['_account']->uid;
+  if ($openid = sync_user_openid($uid)) {
+    if ($url = sync_user_subscription_url($openid)) {
+      sync_user_unsubscribe($uid);
+      sync_user_subscribe($uid, $url);
+    }
+  }
+}
+
+/**
+ * Settings form.
+ */
+function sync_user_form() {
+  $form = array();
+  $form['sync_user_feed_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Provider site URL'),
+    '#description' => t('URL to synchronize users from. Point to the root of a trusted Drupal site with PuSH user module installed. URL must have a trailing slash.'),
+    '#default_value' => variable_get('sync_user_feed_url', 'http://example.com/'),
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Construct a subscription URL.
+ */
+function sync_user_subscription_url($openid) {
+  $url = variable_get('sync_user_feed_url', 'http://example.com/');
+  $url .= 'user/feed?openid='. urlencode($openid);
+  return $url;
+}
+
+/**
+ * Retrieve the OpenID for a given user, assume only 1.
+ *
+ * @todo: resolve the one OpenID per user restriction.
+ */
+function sync_user_openid($uid) {
+  return db_result(db_query("SELECT authname FROM {authmap} WHERE uid = %d AND module = 'openid'", $uid));
+}
+
+/**
+ * Subscribe a user.
+ */
+function sync_user_subscribe($uid, $url) {
+  if (valid_url($url)) {
+    $source = feeds_source('user_updates', $uid);
+    $source->addConfig(array(
+      'FeedsPubSubFetcher' => array(
+        'source' => $url,
+      ),
+    ));
+    $source->save();
+    // @todo: move this to FeedsSource class.
+    feeds_scheduler()->add('user_updates', 'import', $uid);
+    feeds_scheduler()->add('user_updates', 'subscribe', $uid);
+    feeds_scheduler()->add('user_updates', 'expire');
+  }
+}
+
+/**
+ * Unsubscribe a user.
+ */
+function sync_user_unsubscribe($uid) {
+  feeds_scheduler()->remove('user_updates', 'import', $uid);
+  feeds_scheduler()->remove('user_updates', 'subscribe', $uid);
+  feeds_source('user_updates', $uid)->delete();
+}
