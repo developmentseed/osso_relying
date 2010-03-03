@@ -1,4 +1,6 @@
 core = "6.x"
+dependencies[] = "strongarm"
+dependencies[] = "feeds"
 dependencies[] = "openid_sso"
 dependencies[] = "sync_user"
 description = "Relying party configuration for OpenID Single Sign-On."
