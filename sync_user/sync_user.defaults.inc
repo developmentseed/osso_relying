@@ -65,7 +65,7 @@ function _sync_user_feeds_importer_default() {
         ),
       ),
     ),
-    'content_type' => 'page',
+    'content_type' => '',
     'update' => 0,
     'import_period' => '604800',
     'expire_period' => 3600,
