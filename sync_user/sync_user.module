@@ -70,6 +70,24 @@ function sync_user_user($op, &$edit, &$account, $category = NULL) {
 }
 
 /**
+ * Implementation of hook_cron().
+ *
+ * Subscribe users to change notifications from hub. This is a precautionary
+ * step as usually all users should be subscribed in
+ * sync_user_user($op = 'insert'). In case a subscription failed, it will be
+ * attempted anew here.
+ */
+function sync_user_cron() {
+  $uid = 0;
+  $result = db_query_range("SELECT u.uid, am.authname FROM {users} u LEFT JOIN {feeds_push_subscriptions} fp ON u.uid = fp.subscriber_id AND fp.domain = 'user_updates' JOIN {authmap} am ON u.uid = am.uid AND am.module = 'openid' WHERE fp.subscriber_id IS NULL AND u.uid > %d ORDER BY u.uid ASC", variable_get('sync_user_cron_uid', 0), 0, 10);
+  while ($account = db_fetch_object($result)) {
+    sync_user_subscribe($account->uid, sync_user_subscription_url($account->authname));
+    $uid = $account->uid;
+  }
+  variable_set('sync_user_cron_uid', $uid);
+}
+
+/**
  * Implementation of hook_form_alter().
  */
 function sync_user_form_alter(&$form, $form_state, $form_id) {
