@@ -1,4 +1,5 @@
 core = "6.x"
+features[foo] = "bar"
 dependencies[] = "strongarm"
 dependencies[] = "feeds"
 dependencies[] = "openid_sso"
