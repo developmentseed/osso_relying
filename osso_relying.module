@@ -16,31 +16,7 @@ function osso_relying_init() {
  * Implementation hook_menu_alter().
  */
 function osso_relying_menu_alter(&$items) {
-  $items['user/%user_uid_optional']['page callback'] = 'osso_relying_user_view';
   $items['user']['title callback'] = 'osso_relying_user_menu_title';
-}
-
-/**
- * Custom user callback, redirect to OP.
- */
-function osso_relying_user_view($account) {
-  $provider = variable_get('openid_sso_provider', array());
-
-  // Retrieve the user's openid and pass it to the OP to correctly show her
-  // user account on the hub. We use a LIKE condition here to ensure that the
-  // identifier retrieved matches the hub.
-  if (isset($provider['url'])) {
-    $identifier = db_result(db_query("SELECT authname FROM {authmap} WHERE module='openid' AND uid=%d AND authname LIKE '%s%%'", $account->uid, $provider['url']));
-  }
-
-  // Do not redirect to provider if identifier is set - in that case we just
-  // came back from the provider.
-  if (!empty($identifier) && $provider['url'] && !isset($_GET['identifier'])) {
-    drupal_goto($provider['url'] .'sso/user', array('identifier' => $identifier));
-  }
-  else {
-    drupal_goto('');
-  }
 }
 
 /**
