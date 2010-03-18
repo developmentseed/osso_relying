@@ -1,7 +1,5 @@
 <?php
 
-include_once('osso_relying.features.inc');
-
 /**
  * Implementation of hook_init().
  */
