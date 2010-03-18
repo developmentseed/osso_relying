@@ -1,5 +1,7 @@
 <?php
 
+include_once('osso_relying.features.inc');
+
 /**
  * Implementation of hook_init().
  */
@@ -8,15 +10,6 @@ function osso_relying_init() {
   if (arg(0) != 'user') {
     drupal_add_js(drupal_get_path('module', 'osso_relying') .'/osso_relying.js');
   }
-}
-
-/**
- * Implementation of hook_strongarm().
- */
-function osso_relying_strongarm() {
-  return array (
-    'menu_primary_links_source' => 'features',
-  );
 }
 
 /**
