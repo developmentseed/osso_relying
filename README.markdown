@@ -1,11 +1,11 @@
 
-# OSSO Relying for Open Atrium
+# OSSO 
 
 OSSO = OpenID Simple Sign On
 
 ## Set up:
 
-1. Install Open Atrium
+1. Install Drupal
 2. Install drush and drush_make
 3. Run rebuild.sh to build dependencies.
 4. Install OSSO Relying module from admin/build/features page.
