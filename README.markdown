@@ -1,7 +1,8 @@
 
-# OSSO 
+# OpenID Simple Sign On (OSSO)
 
-OSSO = OpenID Simple Sign On
+Sign on to a Drupal site by relying on another Drupal site as a dedicated 
+Identity Provider. For the Identity Provider use the OSSO Provider feature.
 
 ## Set up:
 
